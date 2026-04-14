@@ -104,6 +104,19 @@ try {
   cacheablePaths.push("docbuild/.lake/build/doc/tactics.html");
   cacheablePaths.push("docbuild/.lake/build/doc/find/index.html");
   cacheablePaths.push("docbuild/.lake/build/doc/find/find.js");
+  // Cache build artifacts for doc-gen4 and all of its transitive dependencies
+  // that are NOT already part of the main project (i.e., they are freshly cloned
+  // by `lake update` in setup_docbuild.sh). Without caching these, they are
+  // rebuilt from source every CI run. Native compilation (e.g., leansqlite's C
+  // code, doc-gen4's executable) is non-deterministic, so rebuilding produces
+  // different content hashes. Since the :docInfo module facet chains the
+  // doc-gen4 executable's trace via `exeJob.bindM`, a changed exe hash
+  // invalidates every module's :docInfo marker and forces a full doc rebuild.
+  cacheablePaths.push(".lake/packages/doc-gen4/.lake/build");
+  cacheablePaths.push(".lake/packages/leansqlite/.lake/build");
+  cacheablePaths.push(".lake/packages/UnicodeBasic/.lake/build");
+  cacheablePaths.push(".lake/packages/BibtexQuery/.lake/build");
+  cacheablePaths.push(".lake/packages/MD4Lean/.lake/build");
 
   // Output status to GitHub Actions.
   core.setOutput("name", lakefile.name);
