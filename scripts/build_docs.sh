@@ -60,6 +60,18 @@ mkdir -p docbuild
 DOC_GEN_REV=$(determine_doc_gen_rev)
 
 # Template lakefile.toml
+#
+# The user's project MUST be listed after doc-gen4. Lake's resolver visits
+# requires in reverse order and keeps the first revision it finds for each
+# package name (see `Workspace.resolveDepsCore` in lake's Load/Resolve.lean,
+# and the comment there: "later requires should shadow earlier definitions.
+# Requires written by a user should take priority over those inherited from
+# dependencies"). If any transitive dep is shared between the user's project
+# and doc-gen4 -- notably `plausible`, which mathlib pins at one rev and
+# doc-gen4 pulls in via leansqlite at another -- we want the user's project's
+# pin to win. Otherwise every CI run toggles the shared package to doc-gen4's
+# rev, invalidating every olean transitively depending on it and forcing a
+# full mathlib rebuild.
 cat << EOF > docbuild/lakefile.toml
 name = "docbuild"
 reservoir = false
@@ -67,13 +79,13 @@ version = "0.1.0"
 packagesDir = "../.lake/packages"
 
 [[require]]
-name = "$NAME"
-path = "../"
-
-[[require]]
 scope = "leanprover"
 name = "doc-gen4"
 rev = "$DOC_GEN_REV"
+
+[[require]]
+name = "$NAME"
+path = "../"
 EOF
 
 # Initialise docbuild as a Lean project
